@@ -35,6 +35,15 @@ def get_html_text(html_str, strike_tags: typing.Optional[list] = ["s", "strike",
     Returns: flat string with no \s{2,}, no \n, \t etc include, but only \s
 
     """
+    # check the input strike_tags
+    if not strike_tags:
+        pass
+    if isinstance(strike_tags, list):
+        pass
+    elif isinstance(strike_tags, str):
+        strike_tags = [strike_tags]
+    else:
+        raise ValueError('The tag either be string of list')
 
     readability_cls = readability.Document(html_str, **kwargs)
 

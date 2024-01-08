@@ -1,0 +1,9 @@
+requests
+ratelimit
+tqdm
+pathos
+secedgar
+pandas
+html2text
+readability-lxml
+bs4

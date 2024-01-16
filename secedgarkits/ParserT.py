@@ -42,6 +42,17 @@ def parser_10k_df(html_str):
     # remove all the items that contain links
     noindex_nolink_test_df = noindex_test_df[~noindex_test_df['contain_links']].sort_values('start', ascending=True)
 
+    # remove the duplicated item numbers if consecutive
+    picked_lines = [True] # the first line is always picked
+    for ind in range(1, noindex_nolink_test_df.shape[0]):
+        last_item_num = noindex_nolink_test_df.iloc[ind - 1]['item_num']
+        this_item_num = noindex_nolink_test_df.iloc[ind]['item_num']
+        if last_item_num == this_item_num:
+            picked_lines.append(False)
+        else:
+            picked_lines.append(True)
+    noindex_nolink_test_df = noindex_nolink_test_df[picked_lines].sort_values('start', ascending=True)
+
     assert not noindex_nolink_test_df.duplicated(subset=['item_num']).any(), \
         "PARSE ERROR, There are duplicated item numbers with out link(href/onclick) in the 10-K Form."
 

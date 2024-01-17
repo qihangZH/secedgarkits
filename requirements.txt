@@ -7,3 +7,4 @@ pandas
 html2text
 readability-lxml
 bs4
+numpy

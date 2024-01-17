@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+import numpy as np
 
 
 def parser_10k_df(html_str):
@@ -33,83 +34,144 @@ def parser_10k_df(html_str):
         ]
     )
 
+    if test_df.shape[0] == 0:
+        return pd.DataFrame(columns=['item_num', 'start_index', 'end_index', 'segment_html'])
+
     test_df.columns = ['contain_links', 'item_num', 'start', 'end']
 
-    # remove indexs, These are first occurance of each item number
-    noindex_test_df = test_df[test_df.sort_values('start', ascending=True).duplicated(
-        subset=['item_num'], keep='first')
-    ]
-
     # remove all the items that contain links
-    noindex_nolink_test_df = noindex_test_df[~noindex_test_df['contain_links']].sort_values(
+    nolink_test_df = test_df[~test_df['contain_links']].sort_values(
         'start', ascending=True)
 
     # remove the duplicated item numbers if consecutive
     picked_lines = [True]  # the first line is always picked
-    for ind in range(1, noindex_nolink_test_df.shape[0]):
-        last_item_num = noindex_nolink_test_df.iloc[ind - 1]['item_num']
-        this_item_num = noindex_nolink_test_df.iloc[ind]['item_num']
+    for ind in range(1, nolink_test_df.shape[0]):
+        last_item_num = nolink_test_df.iloc[ind - 1]['item_num']
+        this_item_num = nolink_test_df.iloc[ind]['item_num']
         if last_item_num == this_item_num:
             picked_lines.append(False)
         else:
             picked_lines.append(True)
 
-    noindex_nolink_test_df = noindex_nolink_test_df[picked_lines].sort_values(
+    nolink_test_df = nolink_test_df[picked_lines].sort_values(
         'start', ascending=True)
 
-    if noindex_nolink_test_df.duplicated(subset=['item_num']).any():
-        duplicated_item_num = noindex_nolink_test_df[
-            noindex_nolink_test_df.duplicated(subset=['item_num'])
+    if nolink_test_df.duplicated(subset=['item_num']).any():
+        duplicated_item_num = nolink_test_df[
+            nolink_test_df.duplicated(subset=['item_num'])
         ]['item_num'].unique()
 
         # remove the duplicated item numbers
         # if they are not bigger then the num before and smaller then number after
         picked_lines = [True]  # the first line is always picked
-        for ind in range(1, noindex_nolink_test_df.shape[0] - 1):
-            last_item_num = int(re.search(
+        for ind in range(1, nolink_test_df.shape[0] - 1):
+            # read the number
+            last_item_num, last_item_char = re.search(
                 r'(\d+)([A-Z]{0,})',
-                noindex_nolink_test_df.iloc[ind - 1]['item_num'],
+                nolink_test_df.iloc[ind - 1]['item_num'],
                 flags=re.IGNORECASE
-            ).groups()[0])
-            this_item_num = int(re.search(
+            ).groups()
+            this_item_num, this_item_char = re.search(
                 r'(\d+)([A-Z]{0,})',
-                noindex_nolink_test_df.iloc[ind]['item_num'],
+                nolink_test_df.iloc[ind]['item_num'],
                 flags=re.IGNORECASE
-            ).groups()[0])
-            next_item_num = int(re.search(
+            ).groups()
+
+            next_item_num, next_item_char = re.search(
                 r'(\d+)([A-Z]{0,})',
-                noindex_nolink_test_df.iloc[ind + 1]['item_num'],
+                nolink_test_df.iloc[ind + 1]['item_num'],
                 flags=re.IGNORECASE
-            ).groups()[0])
+            ).groups()
 
             # first situation: not in the duplicated_item_num
-            if not (noindex_nolink_test_df.iloc[ind]['item_num'] in duplicated_item_num):
+            if not (nolink_test_df.iloc[ind]['item_num'] in duplicated_item_num):
                 picked_lines.append(True)
             else:
-                if (last_item_num <= this_item_num) and (this_item_num <= next_item_num):
+
+                bigger_equal_then_last = (
+                        (int(last_item_num) < int(this_item_num))
+                        or
+                        (
+                                (int(last_item_num) == int(this_item_num)) and
+                                (last_item_char.lower() <= this_item_char.lower())
+                        )
+                )
+                smaller_equal_then_next = (
+                        (int(this_item_num) < int(next_item_num))
+                        or
+                        (
+                                (int(this_item_num) == int(next_item_num)) and
+                                (this_item_char.lower() <= next_item_char.lower())
+                        )
+                )
+
+                if bigger_equal_then_last and smaller_equal_then_next:
                     # keep
                     picked_lines.append(True)
                 else:
                     picked_lines.append(False)
 
-        # the last line is always picked
-        picked_lines.append(True)
+        # the last line only check if it is bigger than the last line
+        """special-> last line"""
+        last_item_num, last_item_char = re.search(
+            r'(\d+)([A-Z]{0,})',
+            nolink_test_df.iloc[-2]['item_num'],
+            flags=re.IGNORECASE
+        ).groups()
 
-        noindex_nolink_test_df = noindex_nolink_test_df[picked_lines].sort_values(
+        this_item_num, this_item_char = re.search(
+            r'(\d+)([A-Z]{0,})',
+            nolink_test_df.iloc[-1]['item_num'],
+            flags=re.IGNORECASE
+        ).groups()
+
+        if not (nolink_test_df.iloc[-1]['item_num'] in duplicated_item_num):
+            picked_lines.append(True)
+        else:
+            bigger_equal_then_last = (
+                    (int(last_item_num) < int(this_item_num))
+                    or
+                    (
+                            (int(last_item_num) == int(this_item_num)) and
+                            (last_item_char.lower() <= this_item_char.lower())
+                    )
+            )
+
+            if bigger_equal_then_last:
+                # keep
+                picked_lines.append(True)
+            else:
+                picked_lines.append(False)
+
+        nolink_test_df = nolink_test_df[picked_lines].sort_values(
             'start', ascending=True)
 
-    assert not noindex_nolink_test_df.duplicated(subset=['item_num']).any(), \
+    # some times the first time the ind is error:
+    if nolink_test_df.duplicated(subset=['item_num']).any():
+        # remove the duplicates of "first occurence", keep other duplicates
+        nolink_test_df = nolink_test_df[
+            # xor count, only the first occurence are these two set difference.
+            # and then use ~ to reverse the boolean
+            ~np.logical_xor(
+                nolink_test_df.duplicated('item_num', False),
+                nolink_test_df.duplicated('item_num', 'first')
+            )
+        ].sort_values('start', ascending=True)
+
+    assert not nolink_test_df.duplicated(subset=['item_num']).any(), \
         "PARSE ERROR, There are duplicated item numbers with out link(href/onclick) in the 10-K Form."
 
-    noindex_nolink_test_df['end_index'] = noindex_nolink_test_df['start'].shift(
+    nolink_test_df['end_index'] = nolink_test_df['start'].shift(
         -1).astype(pd.Int64Dtype())
 
-    noindex_nolink_test_df['end_index'].iloc[-1] = len(html_str)
+    nolink_test_df['end_index'].iloc[-1] = len(html_str)
 
-    noindex_nolink_test_df = noindex_nolink_test_df.rename(columns={'start': 'start_index'}
-                                                           )[['item_num', 'start_index', 'end_index']]
+    nolink_test_df = nolink_test_df.rename(columns={'start': 'start_index'}
+                                           )[['item_num', 'start_index', 'end_index']]
 
-    noindex_nolink_test_df['segment_html'] = noindex_nolink_test_df.apply(
+    nolink_test_df['segment_html'] = nolink_test_df.apply(
         lambda x: html_str[x['start_index']:x['end_index']], axis=1)
 
-    return noindex_nolink_test_df
+    nolink_test_df = nolink_test_df.reset_index(drop=True)
+
+    return nolink_test_df

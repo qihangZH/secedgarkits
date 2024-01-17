@@ -23,7 +23,8 @@ def parser_10k_df(html_str):
     test_df = pd.DataFrame(
         [
             (
-                bool(re.search(r'(href|onclick)\=', x.groups()[0], flags=re.IGNORECASE)),
+                bool(re.search(r'(href|onclick)\=',
+                               x.groups()[0], flags=re.IGNORECASE)),
                 x.groups()[-1],
                 x.start(1),
                 x.end()
@@ -40,10 +41,11 @@ def parser_10k_df(html_str):
     ]
 
     # remove all the items that contain links
-    noindex_nolink_test_df = noindex_test_df[~noindex_test_df['contain_links']].sort_values('start', ascending=True)
+    noindex_nolink_test_df = noindex_test_df[~noindex_test_df['contain_links']].sort_values(
+        'start', ascending=True)
 
     # remove the duplicated item numbers if consecutive
-    picked_lines = [True] # the first line is always picked
+    picked_lines = [True]  # the first line is always picked
     for ind in range(1, noindex_nolink_test_df.shape[0]):
         last_item_num = noindex_nolink_test_df.iloc[ind - 1]['item_num']
         this_item_num = noindex_nolink_test_df.iloc[ind]['item_num']
@@ -51,12 +53,56 @@ def parser_10k_df(html_str):
             picked_lines.append(False)
         else:
             picked_lines.append(True)
-    noindex_nolink_test_df = noindex_nolink_test_df[picked_lines].sort_values('start', ascending=True)
+
+    noindex_nolink_test_df = noindex_nolink_test_df[picked_lines].sort_values(
+        'start', ascending=True)
+
+    if noindex_nolink_test_df.duplicated(subset=['item_num']).any():
+        duplicated_item_num = noindex_nolink_test_df[
+            noindex_nolink_test_df.duplicated(subset=['item_num'])
+        ]['item_num'].unique()
+
+        # remove the duplicated item numbers
+        # if they are not bigger then the num before and smaller then number after
+        picked_lines = [True]  # the first line is always picked
+        for ind in range(1, noindex_nolink_test_df.shape[0] - 1):
+            last_item_num = int(re.search(
+                r'(\d+)([A-Z]{0,})',
+                noindex_nolink_test_df.iloc[ind - 1]['item_num'],
+                flags=re.IGNORECASE
+            ).groups()[0])
+            this_item_num = int(re.search(
+                r'(\d+)([A-Z]{0,})',
+                noindex_nolink_test_df.iloc[ind]['item_num'],
+                flags=re.IGNORECASE
+            ).groups()[0])
+            next_item_num = int(re.search(
+                r'(\d+)([A-Z]{0,})',
+                noindex_nolink_test_df.iloc[ind + 1]['item_num'],
+                flags=re.IGNORECASE
+            ).groups()[0])
+
+            # first situation: not in the duplicated_item_num
+            if not (noindex_nolink_test_df.iloc[ind]['item_num'] in duplicated_item_num):
+                picked_lines.append(True)
+            else:
+                if (last_item_num <= this_item_num) and (this_item_num <= next_item_num):
+                    # keep
+                    picked_lines.append(True)
+                else:
+                    picked_lines.append(False)
+
+        # the last line is always picked
+        picked_lines.append(True)
+
+        noindex_nolink_test_df = noindex_nolink_test_df[picked_lines].sort_values(
+            'start', ascending=True)
 
     assert not noindex_nolink_test_df.duplicated(subset=['item_num']).any(), \
         "PARSE ERROR, There are duplicated item numbers with out link(href/onclick) in the 10-K Form."
 
-    noindex_nolink_test_df['end_index'] = noindex_nolink_test_df['start'].shift(-1).astype(pd.Int64Dtype())
+    noindex_nolink_test_df['end_index'] = noindex_nolink_test_df['start'].shift(
+        -1).astype(pd.Int64Dtype())
 
     noindex_nolink_test_df['end_index'].iloc[-1] = len(html_str)
 

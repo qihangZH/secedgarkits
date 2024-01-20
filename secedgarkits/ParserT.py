@@ -16,7 +16,7 @@ def parser_10k_df(html_str):
     """new version: match the outsiders but not the first tags"""
     regex = re.compile(
         r'\<\/[^\<\>]+\>((\<[^\/][^\<\>]*\>)+)(item)(\s|&#160;|&nbsp;)(\d+[A-Z]{0,})\.{0,1}',
-        flags=re.IGNORECASE)
+        flags=re.IGNORECASE | re.DOTALL)
 
     # Use finditer to math the regex
     matches = regex.finditer(html_str)
@@ -25,7 +25,7 @@ def parser_10k_df(html_str):
         [
             (
                 bool(re.search(r'(href|onclick)\=',
-                               x.groups()[0], flags=re.IGNORECASE)),
+                               x.groups()[0], flags=re.IGNORECASE | re.DOTALL)),
                 x.groups()[-1],
                 x.start(1),
                 x.end()
@@ -69,18 +69,18 @@ def parser_10k_df(html_str):
             last_item_num, last_item_char = re.search(
                 r'(\d+)([A-Z]{0,})',
                 nolink_test_df.iloc[ind - 1]['item_num'],
-                flags=re.IGNORECASE
+                flags=re.IGNORECASE | re.DOTALL
             ).groups()
             this_item_num, this_item_char = re.search(
                 r'(\d+)([A-Z]{0,})',
                 nolink_test_df.iloc[ind]['item_num'],
-                flags=re.IGNORECASE
+                flags=re.IGNORECASE | re.DOTALL
             ).groups()
 
             next_item_num, next_item_char = re.search(
                 r'(\d+)([A-Z]{0,})',
                 nolink_test_df.iloc[ind + 1]['item_num'],
-                flags=re.IGNORECASE
+                flags=re.IGNORECASE | re.DOTALL
             ).groups()
 
             # first situation: not in the duplicated_item_num
@@ -116,13 +116,13 @@ def parser_10k_df(html_str):
         last_item_num, last_item_char = re.search(
             r'(\d+)([A-Z]{0,})',
             nolink_test_df.iloc[-2]['item_num'],
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE | re.DOTALL
         ).groups()
 
         this_item_num, this_item_char = re.search(
             r'(\d+)([A-Z]{0,})',
             nolink_test_df.iloc[-1]['item_num'],
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE | re.DOTALL
         ).groups()
 
         if not (nolink_test_df.iloc[-1]['item_num'] in duplicated_item_num):

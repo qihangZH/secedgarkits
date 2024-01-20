@@ -21,7 +21,7 @@ def metadata_parsed_dir_augment(stored_dir) -> dict:
 
     filename_l = os.listdir(stored_dir)
 
-    metadata_regex = re.compile(r'^(.+)\.metadata.json$', flags=re.IGNORECASE)
+    metadata_regex = re.compile(r'^(.+)\.metadata.json$', flags=re.IGNORECASE | re.DOTALL)
     matadata_dict = {}
     for f in filename_l:
         match = re.search(metadata_regex, f)

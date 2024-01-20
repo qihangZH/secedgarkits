@@ -66,7 +66,7 @@ def get_html_text(html_str, strike_tags: typing.Optional[list] = ["s", "strike",
     result_text = h.handle(str(soup))
     # remove all \s+ to ' '
     if to_single_line:
-        result_text = re.sub(r'\s+', ' ', result_text, flags=re.IGNORECASE)
+        result_text = re.sub(r'\s+', ' ', result_text, flags=re.IGNORECASE | re.DOTALL)
 
     return result_text
 

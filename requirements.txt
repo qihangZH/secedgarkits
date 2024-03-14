@@ -8,3 +8,4 @@ html2text
 readability-lxml
 bs4
 numpy
+fake_useragent

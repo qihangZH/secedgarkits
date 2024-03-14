@@ -1,5 +1,5 @@
 import typing
-
+import fake_useragent
 import requests
 import ratelimit
 import readability
@@ -73,9 +73,11 @@ def get_html_text(html_str, strike_tags: typing.Optional[list] = ["s", "strike",
 
 @ratelimit.rate_limited(calls=15, period=90)
 def download_secedgar(url, save_path='./sample.html'):
+
+    ua = fake_useragent.UserAgent()
     heads = {'Host': 'www.sec.gov', 'Connection': 'close',
              'Accept': 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest',
-             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36',
+             'User-Agent': ua.chrome,
              }
 
     response = requests.get(url, headers=heads)

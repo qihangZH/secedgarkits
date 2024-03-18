@@ -5,7 +5,10 @@ import numpy as np
 
 def parser_10k_10q_df(html_str):
     """
-    Parse the 10-K file into dataframe
+    Parse the 10-K file into dataframe,
+    Some issues-> if duplicates occur, then
+        1) some of are index, just use them
+        2) some of them belong to second part
     :param html_str: the html file
     :return: the dataframe, the dataframe contains the item_number, start_index, end_index, segment_html
     """

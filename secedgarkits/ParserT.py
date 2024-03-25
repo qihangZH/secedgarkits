@@ -1,6 +1,6 @@
 import pandas as pd
 import re
-import numpy as np
+import warnings
 
 
 def parser_10k_10q_df(html_str):
@@ -12,6 +12,9 @@ def parser_10k_10q_df(html_str):
     :param html_str: the html file
     :return: the dataframe, the dataframe contains the item_number, start_index, end_index, segment_html
     """
+    warnings.warn("This function face several challenges, include not applicable in complicated HTM files",
+                  DeprecationWarning)
+
     # Use regex to parse the 10-K/Q file
     regex = re.compile(
         r'(\<\/[^\<\>]+\>(\<[^\/][^\<\>]*\>)+(?!item)[^\<\>]*(\<\/[^\<\>]+\>)+)?'

@@ -3,6 +3,65 @@ import re
 import warnings
 
 
+def naive_parser_10k_10q_df(html_str):
+    """
+    Parse the 10-K file into dataframe, naive version
+    just use regex to find all possible elements, however do not make sure the item number is unique
+    :param html_str: the html file
+    :return: the dataframe, the dataframe contains the item_number, start_index, end_index, segment_html
+    """
+    # Use regex to parse the 10-K/Q file
+    regex = re.compile(
+        r'>(item)(\s|&#160;|&nbsp;)(\d+[A-Z]{0,})\.{0,1}',
+        flags=re.IGNORECASE | re.DOTALL | re.MULTILINE)
+
+    # Use finditer to math the regex
+    matches = regex.finditer(html_str)
+
+    test_df = pd.DataFrame(
+        [
+            (
+                bool(re.search(r'(href|onclick)\=',
+                               x.group(0), flags=re.IGNORECASE)),
+                x.groups()[2],
+                x.start(),
+                x.end()
+            )
+            for x in matches
+        ]
+    )
+
+    if test_df.shape[0] == 0:
+        return pd.DataFrame(columns=['item_num', 'start_index', 'end_index', 'segment_html'])
+
+    test_df.columns = ['contain_links', 'item_num', 'start', 'end']
+
+    # remove the duplicated item numbers if consecutive
+    picked_lines = [True]  # the first line is always picked
+    for ind in range(1, test_df.shape[0]):
+        last_item_num = test_df.iloc[ind - 1]['item_num']
+        this_item_num = test_df.iloc[ind]['item_num']
+        if last_item_num == this_item_num:
+            picked_lines.append(False)
+        else:
+            picked_lines.append(True)
+
+    test_df['end_index'] = test_df['start'].shift(
+        -1).astype(pd.Int64Dtype())
+
+    test_df['end_index'].iloc[-1] = len(html_str)
+
+    test_df = test_df.rename(columns={'start': 'start_index'}
+                                           )[['item_num', 'start_index', 'end_index']]
+
+    test_df['segment_html'] = test_df.apply(
+        lambda x: html_str[x['start_index']:x['end_index']], axis=1)
+
+    test_df = test_df.reset_index(drop=True)[['item_num', 'start_index', 'end_index', 'segment_html']]
+
+    return test_df
+
+
 def parser_10k_10q_df(html_str):
     """
     Parse the 10-K file into dataframe,
